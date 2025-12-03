@@ -53,7 +53,7 @@
       document.addEventListener("DOMContentLoaded", async () => {
         const mindarThree = new window.MINDAR.IMAGE.MindARThree({
           container: document.body,
-          imageTargetSrc: "./targets.mind",   // <-- targets na raiz
+       <a-scene mindar-image="imageTargetSrc: ./targets.mind;">// <-- targets na raiz
         });
 
         const { renderer, scene, camera } = mindarThree;
@@ -104,3 +104,4 @@
     </script>
   </body>
 </html>
+
