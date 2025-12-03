@@ -1,111 +1,136 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>MindAR - Controle da Peça</title>
-
-    <!-- MindAR + AFRAME + THREE -->
-<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"></script>
-<script src="https://unpkg.com/three@0.150.1/build/three.module.js"></script>
-
-
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-      body, html {
-        margin: 0;
-        overflow: hidden;
+      body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+
+      #status {
+        position: fixed;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 10;
       }
 
-      #btns {
+      #controls {
         position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
         display: flex;
-        gap: 15px;
+        gap: 10px;
+        z-index: 20;
       }
 
       button {
-        padding: 12px 20px;
-        font-size: 16px;
-        border: none;
-        border-radius: 10px;
         background: #333;
         color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 8px;
         cursor: pointer;
+        font-size: 14px;
+        transition: 0.3s;
       }
 
-      button:active {
-        transform: scale(0.95);
+      button:hover {
+        background: #555;
       }
     </style>
   </head>
 
   <body>
-    <!-- BOTÕES -->
-    <div id="btns">
-      <button id="scale">Aumentar Peça</button>
-      <button id="rotate">Girar</button>
-      <button id="stop">Parar Giro</button>
+    <div id="status">Aponte a câmera para o target</div>
+
+    <div id="controls">
+      <button id="btnScale">Aumentar Tamanho</button>
+      <button id="btnSpeed">Aumentar Velocidade</button>
+      <button id="btnStop">Parar Giro</button>
     </div>
 
+    <a-scene
+      mindar-image="imageTargetSrc: targets.mind;"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false">
+
+      <a-assets>
+        <a-asset-item id="carModel" src="./Assets/ToyCar.glb"></a-asset-item>
+      </a-assets>
+
+      <a-entity light="type: ambient; intensity: 1.2"></a-entity>
+      <a-entity light="type: directional; intensity: 2" position="1 1 1"></a-entity>
+
+      <a-camera look-controls="enabled: false"></a-camera>
+
+      <a-entity id="target" mindar-image-target="targetIndex: 0">
+        <a-gltf-model
+          id="car"
+          src="#carModel"
+          rotation="0 0 0"
+          position="0 0 0.1"
+          scale="0.6 0.6 0.6"
+          animation="property: rotation; to: 0 360 0; loop: true; dur: 4000">
+        </a-gltf-model>
+      </a-entity>
+
+    </a-scene>
+
     <script>
-      document.addEventListener("DOMContentLoaded", async () => {
-        const mindarThree = new window.MINDAR.IMAGE.MindARThree({
-          container: document.body,
-       <a-scene mindar-image="imageTargetSrc: ./targets.mind;">// <-- targets na raiz
-        });
+      const status = document.getElementById("status");
+      const model = document.getElementById("car");
+      const target = document.getElementById("target");
 
-        const { renderer, scene, camera } = mindarThree;
+      let scaleValue = 0.6;
+      let speed = 4000;
+      let spinning = true;
 
-        const anchor = mindarThree.addAnchor(0);
+      // Mensagens do target
+      target.addEventListener("targetFound", () => {
+        status.textContent = "Target reconhecido!";
+      });
+      target.addEventListener("targetLost", () => {
+        status.textContent = "Aponte novamente para o target!";
+      });
 
-        let model;
-        const loader = new THREE.GLTFLoader();
-        loader.load("./Assets/ToyCar.glb", (gltf) => {
-          model = gltf.scene;
-          model.scale.set(0.2, 0.2, 0.2);
-          anchor.group.add(model);
-        });
+      // Aumentar tamanho
+      document.getElementById("btnScale").addEventListener("click", () => {
+        scaleValue += 0.2;
+        model.setAttribute("scale", `${scaleValue} ${scaleValue} ${scaleValue}`);
+      });
 
-        // --- CONTROLE DE ANIMAÇÕES ---
-        let rotating = false;
+      // Aumentar velocidade do giro
+      document.getElementById("btnSpeed").addEventListener("click", () => {
+        if (spinning) {
+          speed = Math.max(400, speed - 400);
+          model.setAttribute("animation",
+            `property: rotation; to: 0 360 0; loop: true; dur: ${speed}`);
+        }
+      });
 
-        document.getElementById("rotate").onclick = () => {
-          rotating = true;
-        };
-
-        document.getElementById("stop").onclick = () => {
-          rotating = false;
-        };
-
-        document.getElementById("scale").onclick = () => {
-          if (model) {
-            model.scale.multiplyScalar(1.2);
-          }
-        };
-
-        // LOOP DE ANIMAÇÃO
-        const clock = new THREE.Clock();
-        const animate = () => {
-          const delta = clock.getDelta();
-
-          if (model && rotating) {
-            model.rotation.y += delta * 1.5; // velocidade do giro
-          }
-
-          renderer.render(scene, camera);
-          requestAnimationFrame(animate);
-        };
-
-        await mindarThree.start();
-        animate();
+      // Parar / Retomar giro
+      document.getElementById("btnStop").addEventListener("click", () => {
+        if (spinning) {
+          model.removeAttribute("animation");
+          spinning = false;
+          btnStop.textContent = "Retomar Giro";
+        } else {
+          model.setAttribute("animation",
+            `property: rotation; to: 0 360 0; loop: true; dur: ${speed}`);
+          spinning = true;
+          btnStop.textContent = "Parar Giro";
+        }
       });
     </script>
+
   </body>
 </html>
-
-
-
