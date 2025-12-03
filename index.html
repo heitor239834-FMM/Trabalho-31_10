@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>MindAR - Controle da Peça</title>
+
+    <!-- MindAR + AFRAME + THREE -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.7/dist/mindar-image-three.prod.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+      body, html {
+        margin: 0;
+        overflow: hidden;
+      }
+
+      #btns {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 15px;
+      }
+
+      button {
+        padding: 12px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 10px;
+        background: #333;
+        color: white;
+        cursor: pointer;
+      }
+
+      button:active {
+        transform: scale(0.95);
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- BOTÕES -->
+    <div id="btns">
+      <button id="scale">Aumentar Peça</button>
+      <button id="rotate">Girar</button>
+      <button id="stop">Parar Giro</button>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+          container: document.body,
+          imageTargetSrc: "./targets.mind",   // <-- targets na raiz
+        });
+
+        const { renderer, scene, camera } = mindarThree;
+
+        const anchor = mindarThree.addAnchor(0);
+
+        let model;
+        const loader = new THREE.GLTFLoader();
+        loader.load("./Assets/ToyCar.glb", (gltf) => {
+          model = gltf.scene;
+          model.scale.set(0.2, 0.2, 0.2);
+          anchor.group.add(model);
+        });
+
+        // --- CONTROLE DE ANIMAÇÕES ---
+        let rotating = false;
+
+        document.getElementById("rotate").onclick = () => {
+          rotating = true;
+        };
+
+        document.getElementById("stop").onclick = () => {
+          rotating = false;
+        };
+
+        document.getElementById("scale").onclick = () => {
+          if (model) {
+            model.scale.multiplyScalar(1.2);
+          }
+        };
+
+        // LOOP DE ANIMAÇÃO
+        const clock = new THREE.Clock();
+        const animate = () => {
+          const delta = clock.getDelta();
+
+          if (model && rotating) {
+            model.rotation.y += delta * 1.5; // velocidade do giro
+          }
+
+          renderer.render(scene, camera);
+          requestAnimationFrame(animate);
+        };
+
+        await mindarThree.start();
+        animate();
+      });
+    </script>
+  </body>
+</html>
